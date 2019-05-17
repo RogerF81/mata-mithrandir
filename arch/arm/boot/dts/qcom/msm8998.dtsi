@@ -282,6 +282,9 @@
 		energy-costs {
 			CPU_COST_0: core-cost0 {
 				busy-cost-data = <
+					386 484
+					406 505
+					456 570
 					476 575
 					497 619
 				>;
@@ -291,12 +294,12 @@
 			};
 			CPU_COST_1: core-cost1 {
 				busy-cost-data = <
-					782  799
-					848  1013
-					916  1103
-					982  1374
-					1007 1476
-					1024 1683
+					645 669
+					679 713
+					782 799
+					848 1013
+					916 1103
+					982 1374
 				>;
 				idle-cost-data = <
 					10 10 0 0
@@ -304,6 +307,9 @@
 			};
 			CLUSTER_COST_0: cluster-cost0 {
 				busy-cost-data = <
+					386 42
+					406 46
+					456 53
 					476 59
 					497 66
 				>;
@@ -313,12 +319,12 @@
 			};
 			CLUSTER_COST_1: cluster-cost1 {
 				busy-cost-data = <
-					782  87
-					848  104
-					916  130
-					982  178
-					1007 185
-					1024 203
+					645 63
+					679 70
+					782 87
+					848 104
+					916 130
+					982 178
 				>;
 				idle-cost-data = <
 					50 50 50 0
@@ -346,7 +352,7 @@
 					dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/vendor";
 					type = "ext4";
 					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait,slotselect,verify";
+					fsmgr_flags = "wait,slotselect";
 					status = "ok";
 				};
 			};
