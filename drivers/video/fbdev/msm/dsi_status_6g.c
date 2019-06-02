@@ -32,8 +32,6 @@
 static bool mdss_check_te_status(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 		struct dsi_status_data *pstatus_data, uint32_t interval)
 {
-	bool ret;
-
 	/*
 	 * During resume, the panel status will be ON but due to race condition
 	 * between ESD thread and display UNBLANK (or rather can be put as
@@ -42,7 +40,7 @@ static bool mdss_check_te_status(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 	 * first TE interrupt arrives after the TE IRQ line is enabled. For such
 	 * cases, re-schedule the ESD thread.
 	 */
-	ret = !atomic_read(&ctrl_pdata->te_irq_ready);
+	bool ret = !atomic_read(&ctrl_pdata->te_irq_ready);
 	if (ret) {
 		schedule_delayed_work(&pstatus_data->check_status,
 			msecs_to_jiffies(interval));
@@ -168,7 +166,7 @@ void mdss_check_dsi_ctrl_status(struct work_struct *work, uint32_t interval)
 	if ((mipi->mode == DSI_CMD_MODE) && !ctrl_pdata->burst_mode_enabled)
 		mutex_unlock(&mdp5_data->ov_lock);
 
-	if ((pstatus_data->mfd->panel_power_state == MDSS_PANEL_POWER_ON)) {
+	if (pstatus_data->mfd->panel_power_state == MDSS_PANEL_POWER_ON) {
 		if (ret > 0)
 			schedule_delayed_work(&pstatus_data->check_status,
 				msecs_to_jiffies(interval));
@@ -185,6 +183,6 @@ void mdss_check_dsi_ctrl_status(struct work_struct *work, uint32_t interval)
 
 	return;
 
-status_dead:
-	mdss_fb_report_panel_dead(pstatus_data->mfd);
+	status_dead:
+		mdss_fb_report_panel_dead(pstatus_data->mfd);
 }
