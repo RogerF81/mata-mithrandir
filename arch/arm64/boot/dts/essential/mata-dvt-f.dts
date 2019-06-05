@@ -48,10 +48,6 @@
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 };
 
-&dsi_otm2503b_dsc_cmd {
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-};
-
 &essential_info {
 	essential,baseband = "3.1F";
 	essential,bandinfo =
