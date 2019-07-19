@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -293,9 +293,10 @@ static int ion_pages_cache_ops(struct ion_client *client,
 	int i;
 	unsigned int len = 0;
 	void (*op)(const void *, const void *);
+	struct ion_buffer *buffer;
 
-
-	table = ion_sg_table(client, handle);
+	buffer = get_buffer(handle);
+	table = buffer->sg_table;
 	if (IS_ERR_OR_NULL(table))
 		return PTR_ERR(table);
 
@@ -344,18 +345,24 @@ int ion_do_cache_op(struct ion_client *client, struct ion_handle *handle,
 	unsigned long flags;
 	struct sg_table *table;
 	struct page *page;
+	struct ion_buffer *buffer;
 
-	ret = ion_handle_get_flags(client, handle, &flags);
-	if (ret)
+	if (!ion_handle_validate(client, handle)) {
+		pr_err("%s: invalid handle passed to %s.\n",
+		       __func__, __func__);
 		return -EINVAL;
+	}
+
+	buffer = get_buffer(handle);
+	flags = buffer->flags;
 
 	if (!ION_IS_CACHED(flags))
 		return 0;
 
-	if (flags & ION_FLAG_SECURE)
+	if (get_secure_vmid(flags) > 0)
 		return 0;
 
-	table = ion_sg_table(client, handle);
+	table = buffer->sg_table;
 
 	if (IS_ERR_OR_NULL(table))
 		return PTR_ERR(table);
@@ -723,8 +730,8 @@ long msm_ion_custom_ioctl(struct ion_client *client,
 		struct mm_struct *mm = current->active_mm;
 
 		if (data.flush_data.handle > 0) {
-			handle = ion_handle_get_by_id(client,
-						(int)data.flush_data.handle);
+			handle = ion_handle_get_by_id(
+					client, (int)data.flush_data.handle);
 			if (IS_ERR(handle)) {
 				pr_info("%s: Could not find handle: %d\n",
 					__func__, (int)data.flush_data.handle);
@@ -741,9 +748,9 @@ long msm_ion_custom_ioctl(struct ion_client *client,
 
 		down_read(&mm->mmap_sem);
 
-		start = (unsigned long) data.flush_data.vaddr;
-		end = (unsigned long) data.flush_data.vaddr
-			+ data.flush_data.length;
+		start = (unsigned long)data.flush_data.vaddr +
+			data.flush_data.offset;
+		end = start + data.flush_data.length;
 
 		if (start && check_vaddr_bounds(start, end)) {
 			pr_err("%s: virtual address %pK is out of bounds\n",

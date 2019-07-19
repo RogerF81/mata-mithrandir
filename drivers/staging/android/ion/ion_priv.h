@@ -2,7 +2,7 @@
  * drivers/staging/android/ion/ion_priv.h
  *
  * Copyright (C) 2011 Google, Inc.
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -52,7 +52,9 @@ struct ion_buffer *ion_handle_buffer(struct ion_handle *handle);
  *			a void *
  * @priv_phys:		private data to the buffer representable as
  *			an ion_phys_addr_t (and someday a phys_addr_t)
- * @lock:		protects the buffers cnt fields
+ * @alloc_lock:		protects the buffer's kmap allocation and deallocation
+ * @page_lock:		protects the buffer's pages
+ * @vma_lock:		protects the buffer's vma list
  * @kmap_cnt:		number of times the buffer is mapped to the kernel
  * @vaddr:		the kenrel mapping if kmap_cnt is not zero
  * @sg_table:		the sg table for the buffer.  Note that if you need
@@ -84,14 +86,16 @@ struct ion_buffer {
 		void *priv_virt;
 		ion_phys_addr_t priv_phys;
 	};
-	struct mutex lock;
-	int kmap_cnt;
+	struct mutex alloc_lock;
+	struct mutex page_lock;
+	struct mutex vma_lock;
+	atomic_t kmap_cnt;
 	void *vaddr;
 	struct sg_table *sg_table;
 	struct page **pages;
 	struct list_head vmas;
 	/* used to track orphaned buffers */
-	int handle_count;
+	atomic_t handle_count;
 	char task_comm[TASK_COMM_LEN];
 	pid_t pid;
 };
@@ -200,8 +204,8 @@ struct ion_heap {
 	struct task_struct *task;
 
 	int (*debug_show)(struct ion_heap *heap, struct seq_file *, void *);
-	atomic_long_t total_allocated;
-	atomic_long_t total_handles;
+	atomic_t total_allocated;
+	atomic_t total_handles;
 };
 
 /**
@@ -417,7 +421,7 @@ void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
  * @low_count:		number of lowmem items in the pool
  * @high_items:		list of highmem items
  * @low_items:		list of lowmem items
- * @mutex:		lock protecting this struct and especially the count
+ * @lock:		lock protecting this struct and especially the count
  *			item list
  * @gfp_mask:		gfp_mask to use from alloc
  * @order:		order of pages in the pool
@@ -433,7 +437,7 @@ struct ion_page_pool {
 	int low_count;
 	struct list_head high_items;
 	struct list_head low_items;
-	struct mutex mutex;
+	spinlock_t lock;
 	struct device *dev;
 	gfp_t gfp_mask;
 	unsigned int order;
@@ -505,9 +509,13 @@ int ion_walk_heaps(struct ion_client *client, int heap_id,
 			enum ion_heap_type type, void *data,
 			int (*f)(struct ion_heap *heap, void *data));
 
-struct ion_handle *ion_handle_get_by_id(struct ion_client *client,
-					int id);
+struct ion_handle *ion_handle_get_by_id(struct ion_client *client, int id);
 
-int ion_handle_put(struct ion_handle *handle);
+void ion_handle_put(struct ion_handle *handle);
+
+bool ion_handle_validate(struct ion_client *client, struct ion_handle *handle);
+
+struct ion_buffer *get_buffer(struct ion_handle *handle);
+
 
 #endif /* _ION_PRIV_H */
